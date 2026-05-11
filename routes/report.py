@@ -3,6 +3,7 @@ from datetime import datetime
 from services.groq_client import call_groq
 from services.cache import get_from_cache, set_cache
 from services.metrics import response_times
+from services.utils import sanitize_input
 import json
 import time
 
@@ -11,14 +12,12 @@ report_bp = Blueprint("report", __name__)
 
 def load_prompt(text):
     with open("prompts/report.txt", "r") as f:
-        template = f.read()
-    return template.replace("{input}", text)
+        return f.read().replace("{input}", text)
 
 
 @report_bp.route("/generate-report", methods=["POST"])
 def generate_report():
     start = time.time()
-
     data = request.get_json()
 
     if not data or "text" not in data:
@@ -26,18 +25,15 @@ def generate_report():
 
     raw_text = data["text"]
 
-    if not isinstance(raw_text, str) or len(raw_text.strip()) == 0:
+    if not isinstance(raw_text, str) or not raw_text.strip():
         return jsonify({"error": "Invalid input"}), 400
 
     if len(raw_text) > 500:
         return jsonify({"error": "Input too long"}), 400
 
-    # Normalize input
-    text = raw_text.strip().lower()
+    text = sanitize_input(raw_text)
 
-    # ✅ FIX: Unique cache key
     cache_key = f"report:{text}"
-
     cached = get_from_cache(cache_key)
     if cached:
         return jsonify(cached)
@@ -51,7 +47,7 @@ def generate_report():
 
     if not ai_response:
         return jsonify({
-            "title": "AI service unavailable",
+            "title": "AI unavailable",
             "summary": "",
             "overview": "",
             "key_items": [],
@@ -82,9 +78,7 @@ def generate_report():
         "generated_at": datetime.utcnow().isoformat()
     }
 
-    # ✅ Store correctly
     set_cache(cache_key, result)
-
     response_times.append(time.time() - start)
 
     return jsonify(result)

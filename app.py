@@ -4,15 +4,17 @@ import time
 
 load_dotenv()
 
-# 🚀 Startup preload
+# 🚀 Startup preload (Day 11)
 print("🚀 Starting AI Service...")
 MODEL_READY = True
 print("✅ AI Model preloaded successfully")
 
+# 🔹 Import routes
 from routes.describe import describe_bp
 from routes.recommend import recommend_bp
 from routes.report import report_bp
 
+# 🔹 Metrics
 from services.metrics import START_TIME, response_times
 
 app = Flask(__name__)
@@ -23,7 +25,7 @@ app.register_blueprint(recommend_bp)
 app.register_blueprint(report_bp)
 
 
-# 🔐 Security headers
+# 🔐 Security Headers (Day 8 requirement)
 @app.after_request
 def add_security_headers(response):
     response.headers["X-Content-Type-Options"] = "nosniff"
@@ -34,18 +36,13 @@ def add_security_headers(response):
     return response
 
 
-# 🔹 Health check
+# 🔹 Health Endpoint (Day 7)
 @app.route("/health")
 def health():
     uptime = time.time() - START_TIME
 
-    # 🔥 Use last 5 responses (better average)
     recent = response_times[-5:]
-
-    avg_time = (
-        sum(recent) / len(recent)
-        if recent else 0
-    )
+    avg_time = sum(recent) / len(recent) if recent else 0
 
     return {
         "status": "ok",
